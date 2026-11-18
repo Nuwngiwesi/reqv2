@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05060D">
+<title>Request Bot Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--a:#8B5CFF;--b:#22D3EE;--ok:#34D399;--bad:#FB7185;--bg:#05060d;--card:#0d1020;--tx:#F1F3FF;--mut:#98A2C8;--line:rgba(160,175,255,.16);--d:'Outfit','Noto Sans Sinhala',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:400 15px/1.55 'Inter','Noto Sans Sinhala',system-ui,sans-serif;min-height:100vh;padding:env(safe-area-inset-top) 0 calc(90px + env(safe-area-inset-bottom))}
+button,input,textarea,select{font:inherit;color:inherit}
+.w{max-width:980px;margin:0 auto;padding:0 16px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+.brand{font:800 19px var(--d)}.brand i{font-style:normal;background:linear-gradient(120deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.link{background:none;border:0;color:var(--b);cursor:pointer;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:14px}
+h1{font:800 28px var(--d)}h2{font:700 16px var(--d);margin-bottom:8px}
+.mut{color:var(--mut);font-size:13px}
+label{display:block;font-weight:600;font-size:13.5px;margin:14px 0 5px}
+input[type=text],input[type=password],input[type=tel],input[type=url],input[type=number],select,textarea{width:100%;min-height:46px;padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:#080a16}
+textarea{min-height:90px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
+.btn{min-height:48px;padding:0 24px;border-radius:13px;border:0;font-weight:700;cursor:pointer;background:linear-gradient(120deg,var(--a),var(--b));color:#06070f}
+.btn.sm{min-height:40px;padding:0 16px}.btn.gh{background:#1a1f3a;color:var(--tx)}
+#login{max-width:420px;margin:8vh auto 0}#login .btn{width:100%;margin-top:18px}
+.err{color:var(--bad);min-height:20px;margin-top:10px;font-size:14px}
+#app{display:none}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-top:14px}
+.tabs button{flex:none;padding:10px 16px;border-radius:99px;border:1px solid var(--line);background:none;cursor:pointer;font-weight:600;color:var(--mut)}
+.tabs button.on{background:linear-gradient(120deg,var(--a),var(--b));color:#06070f;border-color:0}
+.pane{display:none}.pane.on{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:760px){.g2{grid-template-columns:1fr}}
+.stat{background:#080a16;border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat b{display:block;font:800 24px var(--d)}.stat span{font-size:12px;color:var(--mut)}
+.sw{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.sw span{font-size:12.5px;color:var(--mut);display:block}
+.tg{position:relative;width:50px;height:28px;flex:none}.tg input{position:absolute;inset:0;opacity:0;z-index:1;cursor:pointer;margin:0}
+.tg s{position:absolute;inset:0;border-radius:99px;background:#252a48;transition:.18s}
+.tg s::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s}
+.tg input:checked+s{background:var(--ok)}.tg input:checked+s::after{transform:translateX(22px)}
+.chart{display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:10px}
+.chart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
+.chart i{width:100%;border-radius:4px 4px 0 0;min-height:2px}.chart small{font-size:10px;color:var(--mut)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700}.pill.ok{background:rgba(52,211,153,.16);color:var(--ok)}.pill.fail{background:rgba(251,113,133,.16);color:var(--bad)}
+.rule{display:flex;gap:8px;margin-top:8px}.rule input{flex:1}
+.chat{background:#0b141a;border-radius:16px;padding:14px;border:1px solid var(--line)}
+.bub{margin-left:auto;max-width:96%;background:#005c4b;border-radius:12px 12px 4px 12px;padding:6px;font-size:14px}
+.bub img{width:100%;max-height:150px;object-fit:contain;background:#0003;border-radius:8px;display:block;margin-bottom:6px}
+.bub p{padding:2px 6px;white-space:pre-wrap;word-break:break-word}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(5,6,13,.94);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+.bar .in{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+</style></head><body><div class="w">
+<header><div class="brand"><i>REQUEST BOT</i> Dashboard</div><button class="link" id="out" hidden>Log out</button></header>
+
+<section id="login" class="card">
+  <h1>Log in</h1><p class="mut">Bot number + pair web eken connect karaddi dunna pairing code eka.</p>
+  <label for="n">Bot number</label><input id="n" type="tel" placeholder="94712345678">
+  <label for="p">Pairing code</label><input id="p" type="password" placeholder="ABCD-1234" autocapitalize="characters">
+  <div class="err" id="lerr"></div><button class="btn" id="go">Log in</button>
+</section>
+
+<main id="app">
+  <div class="tabs" id="tabs"><button data-t="ov" class="on">📊 Analytics</button><button data-t="br">🎨 Branding</button><button data-t="ru">📜 Rules</button><button data-t="gr">⚙️ Groups &amp; Messages</button></div>
+
+  <div class="pane on" id="ov">
+    <div class="card"><h2>Today</h2><div class="g3" id="today"></div></div>
+    <div class="card"><h2>Last 14 days</h2><div class="mut"><span style="color:var(--a)">■</span> requests &nbsp;<span style="color:var(--ok)">■</span> delivered &nbsp;<span style="color:var(--bad)">■</span> failed</div><div class="chart" id="chart"></div></div>
+    <div class="g2"><div class="card"><h2>All time (45 days)</h2><div id="tot"></div></div><div class="card"><h2>Sources</h2><div id="src"></div></div></div>
+    <div class="g2"><div class="card"><h2>🔥 Top movies</h2><div id="tt"></div></div><div class="card"><h2>👤 Top requesters</h2><div id="tu"></div></div></div>
+    <div class="card"><h2>Recent deliveries</h2><div id="rec"></div></div>
+  </div>
+
+  <div class="pane" id="br"><div class="g2">
+    <div class="card"><h2>Bot branding</h2>
+      <label for="name">Bot name</label><input id="name" type="text" maxlength="40">
+      <label for="logo">Logo (direct image link)</label><input id="logo" type="url" placeholder="https://…/logo.png"><div class="mut">Poster nathi welawata logo eka post / list ekata yanawa.</div>
+      <label for="caption">Movie caption</label><input id="caption" type="text" maxlength="100">
+      <label for="footer">Footer</label><input id="footer" type="text" maxlength="100"></div>
+    <div class="card"><h2>Live preview</h2><div class="chat"><div class="bub"><img id="pvl" alt="" hidden><p id="pv"></p></div></div></div>
+  </div></div>
+
+  <div class="pane" id="ru">
+    <div class="card"><h2>Group rules</h2><p class="mut">Request group eke <b>rules</b> kiyala type karama bot meka yawanawa. Save karapu gaman update wenawa.</p><div id="rules"></div><button class="btn sm gh" id="addr" style="margin-top:12px">+ Add rule</button></div>
+    <div class="card"><h2>Automatic rules</h2>
+      <div class="g2"><div><label for="limit">Films per person per day</label><input id="limit" type="number" min="1" max="50"></div>
+      <div><label for="cool">Seconds between searches</label><input id="cool" type="number" min="3" max="120"></div></div>
+      <label for="qual">Preferred quality</label><select id="qual"><option>480</option><option>720</option><option>1080</option></select>
+      <label>Search sources</label><div id="srcs"></div>
+      <div class="sw"><div><b>Inbox guard</b><span>Warn once, then remove from groups + block</span></div><label class="tg"><input type="checkbox" id="guard"><s></s></label></div>
+      <label for="allow">Inbox guard ignores (one number per line)</label><textarea id="allow" style="min-height:70px"></textarea></div>
+  </div>
+
+  <div class="pane" id="gr">
+    <div class="card"><h2>Request bot</h2>
+      <div class="sw"><div><b>Request bot on</b><span>Same as .reqbot on</span></div><label class="tg"><input type="checkbox" id="en"><s></s></label></div>
+      <div class="g2"><div><label for="rl">Request group link</label><input id="rl" type="url" placeholder="https://chat.whatsapp.com/…"><div class="mut" id="rn"></div></div>
+      <div><label for="ml">Movie group link</label><input id="ml" type="url" placeholder="https://chat.whatsapp.com/…"><div class="mut" id="mn"></div></div></div></div>
+    <div class="card"><h2>Messages</h2>
+      <label for="warn">Inbox warning</label><textarea id="warn" maxlength="900"></textarea>
+      <label for="lim">Daily limit reached</label><textarea id="lim" maxlength="600"></textarea><div class="mut">Use {user} {limit}</div>
+      <label for="done">Film sent message</label><textarea id="done" maxlength="900"></textarea><div class="mut">Use {user} {title} {limit} {left} {link}</div></div>
+  </div>
+</main></div>
+
+<div class="bar" id="bar" hidden><div class="in"><span class="mut" id="msg">Ready.</span><button class="btn" id="save">Save changes</button></div></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+let T=sessionStorage.getItem('rt')||'',rules=[],srcOn={},ICON={cine:'🎬 CineSubz',dinka:'🎞️ Dinka',cartoon:'🧸 Cartoon',anime:'🎌 Anime'};
+async function api(p,o={}){
+  const r=await fetch('/code/panel'+p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T}});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401&&T){logout();throw new Error('Session expired')}
+  if(!j.ok)throw new Error(j.error||'Error');return j;
+}
+function logout(){T='';sessionStorage.removeItem('rt');location.reload()}
+$('#out').onclick=logout;
+$('#go').onclick=async()=>{
+  $('#lerr').textContent='';
+  try{
+    const r=await fetch('/code/panel/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:$('#n').value,password:$('#p').value})});
+    const j=await r.json();if(!j.ok)throw new Error(j.error);
+    T=j.token;sessionStorage.setItem('rt',T);start();
+  }catch(e){$('#lerr').textContent=e.message}
+};
+$$('#tabs button').forEach(b=>b.onclick=()=>{$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));$$('.pane').forEach(p=>p.classList.toggle('on',p.id===b.dataset.t));$('#bar').hidden=b.dataset.t==='ov'});
+
+function drawRules(){
+  const box=$('#rules');box.textContent='';
+  rules.forEach((t,i)=>{const r=el('div','rule'),inp=el('input');inp.type='text';inp.maxLength=200;inp.value=t;inp.oninput=()=>rules[i]=inp.value;
+    const d=el('button','btn sm gh','✕');d.onclick=()=>{rules.splice(i,1);drawRules()};r.append(inp,d);box.append(r)});
+  if(!rules.length)box.append(el('p','mut','No rules yet.'));
+}
+$('#addr').onclick=()=>{if(rules.length<15){rules.push('');drawRules()}};
+function drawSrcs(){
+  const box=$('#srcs');box.textContent='';
+  for(const k in ICON){const w=el('div','sw'),l=el('b',null,ICON[k]),t=el('label','tg'),i=el('input');i.type='checkbox';i.checked=srcOn[k]!==false;i.onchange=()=>srcOn[k]=i.checked;t.append(i,el('s'));w.append(l,t);box.append(w)}
+}
+function preview(){
+  const l=$('#logo').value.trim(),im=$('#pvl');im.hidden=!/^https?:/i.test(l);if(!im.hidden)im.src=l;
+  $('#pv').textContent='❚█═'+$('#caption').value+'═█❚\n🏷️ '+$('#name').value+'\n\n🎬 Movie Name (2024)\n━━━━━━━━━━━━━━━━\n⭐ Rating: 7.5\n🎞️ Quality: 720p\n━━━━━━━━━━━━━━━━\n\n🍿 Enjoy!\n> '+$('#footer').value;
+}
+['name','logo','caption','footer'].forEach(i=>$('#'+i).addEventListener('input',preview));
+
+function fill(r){
+  $('#name').value=r.name;$('#logo').value=r.logo;$('#caption').value=r.text.caption;$('#footer').value=r.text.footer;
+  $('#warn').value=r.text.warnText;$('#lim').value=r.text.limitText;$('#done').value=r.text.doneText;
+  $('#limit').value=r.dailyLimit;$('#cool').value=r.cooldown;$('#qual').value=r.quality;
+  $('#en').checked=r.enabled;$('#guard').checked=r.inboxGuard;$('#allow').value=(r.allow||[]).join('\n');
+  $('#rn').textContent=r.reqGroup?'✅ '+r.reqGroup.name:'❌ not set';$('#mn').textContent=r.mvGroup?'✅ '+r.mvGroup.name:'❌ not set';
+  $('#rl').value='';$('#ml').value='';rules=[...r.rules];srcOn={...r.sources};drawRules();drawSrcs();preview();
+}
+$('#save').onclick=async()=>{
+  const b=$('#save');b.disabled=true;$('#msg').textContent='Saving…';
+  const body={name:$('#name').value,logo:$('#logo').value,text:{caption:$('#caption').value,footer:$('#footer').value,warnText:$('#warn').value,limitText:$('#lim').value,doneText:$('#done').value},
+    dailyLimit:$('#limit').value,cooldown:$('#cool').value,quality:$('#qual').value,sources:srcOn,rules:rules.filter(x=>x.trim()),
+    enabled:$('#en').checked,inboxGuard:$('#guard').checked,allow:$('#allow').value.split(/\s+/).filter(Boolean)};
+  if($('#rl').value.trim())body.reqLink=$('#rl').value.trim();if($('#ml').value.trim())body.mvLink=$('#ml').value.trim();
+  try{const j=await api('/req/save',{method:'POST',body:JSON.stringify(body)});fill(j.req);$('#msg').textContent='✅ Saved & applied to the bot.'}
+  catch(e){$('#msg').textContent='❌ '+e.message}finally{b.disabled=false}
+};
+
+function rows(box,list,fn){box.textContent='';if(!list.length)box.append(el('p','mut','No data yet.'));list.forEach(x=>{const r=el('div','row');fn(x).forEach(c=>r.append(c));box.append(r)})}
+function stats(s){
+  const t=s.today,tot=s.totals,ok=tot.ok||0,fl=tot.fail||0;
+  const st=(v,l)=>{const d=el('div','stat');d.append(el('b',null,v),el('span',null,l));return d};
+  const td=$('#today');td.textContent='';td.append(st(t.search,'Requests'),st(t.ok,'Delivered'),st(t.fail,'Failed'),st(t.limit,'Limit hits'),st(ok+fl?Math.round(ok*100/(ok+fl))+'%':'-','Success rate'),st(s.avgSecs?s.avgSecs+'s':'-','Avg delivery'));
+  const mx=Math.max(1,...s.days.map(d=>d.search)),ch=$('#chart');ch.textContent='';
+  s.days.forEach(d=>{const c=el('div');c.title=d.d+': '+d.search+' req, '+d.ok+' ok, '+d.fail+' fail';
+    [['search','var(--a)'],['ok','var(--ok)'],['fail','var(--bad)']].forEach(([k,col])=>{});
+    const wrap=el('div');wrap.style.cssText='display:flex;gap:2px;align-items:flex-end;height:100px;width:100%';
+    [['search','var(--a)'],['ok','var(--ok)'],['fail','var(--bad)']].forEach(([k,col])=>{const i=el('i');i.style.cssText='flex:1;background:'+col+';height:'+Math.max(2,d[k]*100/mx)+'%';wrap.append(i)});
+    c.append(wrap,el('small',null,d.d.slice(8)));ch.append(c)});
+  const L=[['search','🔎 Searches'],['nores','🚫 No results'],['ok','✅ Delivered'],['fail','❌ Failed'],['limit','⛔ Limit hits'],['warn','⚠️ Inbox warnings'],['ban','🔨 Auto bans']];
+  rows($('#tot'),L,([k,n])=>[el('span',null,n),el('b',null,String(tot[k]||0))]);
+  rows($('#src'),Object.entries(s.sources),([k,n])=>[el('span',null,ICON[k]||k),el('b',null,String(n))]);
+  rows($('#tt'),s.topTitles,x=>[el('span',null,x.t),el('b',null,String(x.n))]);
+  rows($('#tu'),s.topUsers,x=>[el('span',null,x.u),el('b',null,String(x.n))]);
+  rows($('#rec'),s.recent,x=>{const p=el('span','pill '+x.type,x.type==='ok'?'SENT'+(x.secs?' '+x.secs+'s':''):'FAIL');return [el('span',null,x.title+' · '+x.user+(x.err?' · '+x.err:'')),p]});
+}
+async function start(){
+  try{const [a,b]=await Promise.all([api('/req'),api('/req/stats')]);
+    $('#login').style.display='none';$('#app').style.display='block';$('#out').hidden=false;
+    fill(a.req);stats(b.stats);
+  }catch(e){$('#lerr').textContent=e.message}
+}
+if(T)start();
+</script></body></html>
