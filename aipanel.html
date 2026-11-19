@@ -67,8 +67,9 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
     <div class="card"><div class="main"><div><h2 id="mtitle">AI Human Chat</h2><div class="mut">ON karama bot eka manussayek wage reply karanawa.</div></div><label class="tg"><input type="checkbox" id="enabled"><s></s></label></div>
       <div class="warn" id="nokey" hidden>⚠️ .env eke <b>AI_API_KEY</b> (nathnam SUPUN_API_KEY) set karala bot restart karanna.</div>
       <label for="name">AI name</label><input id="name" type="text" maxlength="30"><div class="mut">Group eke me name eken hadanawama reply karanawa.</div></div>
-    <div class="card"><h2>This week</h2><div class="g3" id="st"></div><div class="bars" id="bars"></div></div>
+    <div class="card"><h2>This week</h2><div class="g2" id="st"></div><div class="bars" id="bars"></div></div>
     <div class="card"><h2>Top chatters (7 days)</h2><div id="top"></div></div>
+    <div class="card"><h2>Recent errors</h2><div id="errs"></div></div>
   </div>
 
   <div class="pane" id="p">
@@ -76,8 +77,15 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
       <textarea id="persona" maxlength="2500" style="min-height:200px"></textarea>
       <div class="mut" id="pc"></div>
       <div class="pres" id="pres"></div></div>
+    <div class="card"><h2>Style &amp; triggers</h2>
+      <div class="g2"><div><label for="tone">Tone</label><select id="tone"><option value="friendly">Friendly</option><option value="funny">Funny</option><option value="calm">Calm</option><option value="serious">Serious / formal</option></select></div>
+      <div><label for="aliases">Extra call names (comma separated)</label><input id="aliases" type="text" placeholder="machan, bro"></div></div>
+      <div class="sw"><div><b>Use the person's name</b><span>WhatsApp name eka AI ekata denawa</span></div><label class="tg"><input type="checkbox" id="useName"><s></s></label></div>
+      <label for="welcome">Welcome message (first chat only, empty = off)</label><input id="welcome" type="text" maxlength="300">
+      <label for="mediaReply">Reply to voice / photo / sticker (empty = ignore)</label><input id="mediaReply" type="text" maxlength="200"></div>
+    <div class="card"><h2>Auto replies (no AI)</h2><p class="mut">Message eke keyword eka thiyenawanam e answer eka direct yawanawa.</p><div id="faq"></div><button class="btn sm gh" id="addf" style="margin-top:12px">+ Add</button></div>
     <div class="card"><h2>Test chat</h2><p class="mut">Save nokarama draft prompt eka test karanna puluwan.</p>
-      <div class="chat" id="chat"></div>
+      <div class="chat" id="chat"></div><div class="pres" id="chips"></div>
       <div class="send"><input id="tm" type="text" placeholder="Hi…" maxlength="500"><button class="btn sm" id="ts">Send</button></div></div>
   </div>
 
@@ -86,14 +94,16 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
     <div class="sw"><div><b>Blue ticks</b><span>Message eka read karanawa</span></div><label class="tg"><input type="checkbox" id="readReceipt"><s></s></label></div>
     <div class="sw"><div><b>Split long replies</b><span>Lamba reply eka message 2-3kata kadala yawanawa</span></div><label class="tg"><input type="checkbox" id="split"><s></s></label></div>
     <div class="g2"><div><label for="speed">Typing speed</label><select id="speed"><option value="fast">Fast</option><option value="normal">Normal</option><option value="slow">Slow</option></select></div>
-    <div><label for="language">Language</label><select id="language"><option value="auto">Auto (match the person)</option><option value="si">Sinhala</option><option value="singlish">Singlish</option><option value="en">English</option></select></div>
+    <div><label for="language">Language</label><select id="language"><option value="auto">Auto (detects Sinhala / Singlish / English)</option><option value="si">Sinhala</option><option value="singlish">Singlish</option><option value="en">English</option></select></div>
     <div><label for="emoji">Emojis</label><select id="emoji"><option value="none">None</option><option value="low">Few</option><option value="normal">Normal</option></select></div>
     <div><label for="maxChars">Max reply length (characters)</label><input id="maxChars" type="number" min="60" max="1000"></div>
     <div><label for="memory">Memory (message pairs remembered)</label><input id="memory" type="number" min="0" max="20"></div>
-    <div><label for="cooldown">Seconds between replies per person</label><input id="cooldown" type="number" min="1" max="60"></div></div>
+    <div><label for="cooldown">Seconds between replies per person</label><input id="cooldown" type="number" min="1" max="60"></div>
+    <div><label for="dailyLimit">AI replies per person per day (0 = unlimited)</label><input id="dailyLimit" type="number" min="0" max="500"></div></div>
     <div class="sw" style="margin-top:14px"><div><b>Sleep time</b><span>Me welawata reply karanne na (Sri Lanka time)</span></div><label class="tg"><input type="checkbox" id="sleepOn"><s></s></label></div>
     <div class="g2"><div><label for="sleepFrom">From</label><input id="sleepFrom" type="time"></div><div><label for="sleepTo">To</label><input id="sleepTo" type="time"></div></div>
     <label for="errorText">Message when AI fails (empty = stay silent)</label><input id="errorText" type="text" maxlength="200">
+    <label for="limitText">Message when the daily limit is reached (empty = silent)</label><input id="limitText" type="text" maxlength="200">
     <button class="btn sm gh" id="clr" style="margin-top:14px">🧹 Clear chat memory</button></div></div>
 
   <div class="pane" id="t"><div class="card"><h2>Where should it reply?</h2>
@@ -117,8 +127,9 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
 let T=sessionStorage.getItem('at')||'';
 const PRESETS={'Friendly Sri Lankan':'You are a friendly, funny Sri Lankan guy who loves chatting. Be warm, casual and helpful. Use simple everyday words.','Helpful assistant':'You are a calm, smart and helpful person. Give clear, accurate answers in short messages and ask a question back when something is unclear.','Movie buddy':'You love movies, series and anime. Chat about films, recommend what to watch, and keep it fun. Tell people to use the request group for movie requests.','Business support':'You are a polite support person for a small business. Answer politely and briefly, ask for details when needed, and say the owner will follow up if you do not know.'};
-const BOOL=['enabled','fallback','inbox','ownerOnly','typing','readReceipt','split','sleepOn'];
-const STR=['name','persona','model','errorText','provider','groups','language','emoji','speed','sleepFrom','sleepTo','maxChars','memory','cooldown'];
+const BOOL=['enabled','fallback','inbox','ownerOnly','typing','readReceipt','split','sleepOn','useName'];
+let faq=[];
+const STR=['name','persona','model','errorText','provider','groups','language','emoji','speed','sleepFrom','sleepTo','maxChars','memory','cooldown','tone','welcome','mediaReply','limitText','dailyLimit'];
 async function api(p,o={}){
   const r=await fetch('/code/panel'+p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T}});
   const j=await r.json().catch(()=>({}));
@@ -142,9 +153,11 @@ function fill(d){
   BOOL.forEach(k=>$('#'+k).checked=!!s[k]);STR.forEach(k=>{if($('#'+k).tagName!=='SELECT'||k!=='provider')$('#'+k).value=s[k]??''});
   const pv=$('#provider');pv.textContent='';d.providers.forEach(p=>{const o=el('option',null,p);o.value=p;pv.append(o)});pv.value=s.provider;
   $('#allow').value=(s.allow||[]).join('\n');$('#block').value=(s.block||[]).join('\n');
-  $('#nokey').hidden=d.keySet;$('#mtitle').textContent=s.name+' · AI Human Chat';cnt();
+  $('#nokey').hidden=d.keySet;$('#mtitle').textContent=s.name+' · AI '+(s.enabled?'🟢 ON':'🔴 OFF');cnt();
+  $('#aliases').value=(s.aliases||[]).join(', ');faq=(s.faq||[]).map(x=>({...x}));drawFaq();
+  const eb=$('#errs');eb.textContent='';if(!(d.errors||[]).length)eb.append(el('p','mut','No errors 🎉'));(d.errors||[]).forEach(x=>{const r=el('div','row');r.append(el('span',null,x.m),el('small',null,x.at.slice(5,16).replace('T',' ')));eb.append(r)});
   const st=d.stats,box=$('#st');box.textContent='';
-  [[st.today.replies,'Replies today'],[st.week.replies,'Replies (7 days)'],[st.week.errors,'Errors (7 days)'],[st.week.avgMs?(st.week.avgMs/1000).toFixed(1)+'s':'-','Avg reply time']].slice(0,3).forEach(([v,l])=>{const x=el('div','stat');x.append(el('b',null,String(v)),el('span',null,l));box.append(x)});
+  [[st.today.replies,'Replies today'],[st.week.replies,'Replies (7 days)'],[st.week.errors,'Errors (7 days)'],[st.week.avgMs?(st.week.avgMs/1000).toFixed(1)+'s':'-','Avg reply time']].forEach(([v,l])=>{const x=el('div','stat');x.append(el('b',null,String(v)),el('span',null,l));box.append(x)});
   const mx=Math.max(1,...st.days.map(x=>x.n)),bars=$('#bars');bars.textContent='';
   st.days.forEach(x=>{const c=el('div'),i=el('i');i.style.height=Math.max(2,x.n*80/mx)+'px';c.title=x.d+': '+x.n;c.append(i,el('small',null,x.d.slice(8)));bars.append(c)});
   const top=$('#top');top.textContent='';if(!st.top.length)top.append(el('p','mut','No chats yet.'));
@@ -152,6 +165,7 @@ function fill(d){
 }
 function collect(){
   const b={};BOOL.forEach(k=>b[k]=$('#'+k).checked);STR.forEach(k=>b[k]=$('#'+k).value);
+  b.aliases=$('#aliases').value.split(',').map(x=>x.trim()).filter(Boolean);b.faq=faq.filter(x=>x.q.trim()&&x.a.trim());
   b.allow=$('#allow').value.split(/\s+/).filter(Boolean);b.block=$('#block').value.split(/\s+/).filter(Boolean);return b;
 }
 $('#save').onclick=async()=>{
@@ -170,6 +184,17 @@ async function test(){
   try{const j=await api('/ai/test',{method:'POST',body:JSON.stringify({message:v,draft:collect()})});w.textContent=j.reply}
   catch(e){w.textContent='❌ '+e.message}finally{$('#ts').disabled=false}
 }
+function drawFaq(){
+  const box=$('#faq');box.textContent='';
+  faq.forEach((f,i)=>{const w=el('div');w.style.cssText='border-top:1px solid var(--line);padding:10px 0';
+    const q=el('input');q.type='text';q.placeholder='keyword (e.g. price)';q.maxLength=100;q.value=f.q;q.oninput=()=>faq[i].q=q.value;
+    const a=el('textarea');a.placeholder='answer';a.maxLength=500;a.style.cssText='min-height:70px;margin-top:6px';a.value=f.a;a.oninput=()=>faq[i].a=a.value;
+    const d=el('button','btn sm gh','Remove');d.style.marginTop='6px';d.onclick=()=>{faq.splice(i,1);drawFaq()};w.append(q,a,d);box.append(w)});
+  if(!faq.length)box.append(el('p','mut','No auto replies yet.'));
+}
+$('#addf').onclick=()=>{if(faq.length<30){faq.push({q:'',a:''});drawFaq()}};
+['Hi','ඔයා කොහොමද?','mokada karanne?','හොඳ film එකක් කියන්න'].forEach(t=>{const b=el('button','btn sm gh',t);b.onclick=()=>{$('#tm').value=t;test()};$('#chips').append(b)});
+document.addEventListener('input',e=>{if(e.target.id!=='tm'&&e.target.closest('#app'))$('#msg').textContent='● Unsaved changes'});
 $('#ts').onclick=test;$('#tm').onkeydown=e=>{if(e.key==='Enter')test()};
 async function start(){
   try{const d=await api('/ai');$('#login').style.display='none';$('#app').style.display='block';$('#out').hidden=false;$('#bar').hidden=false;fill(d)}
