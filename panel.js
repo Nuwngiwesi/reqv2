@@ -20,7 +20,7 @@ const TEXT_FIELDS = {
 };
 const BOOL_FIELDS = ['ALWAYS_ONLINE', 'STATUS_VIEW', 'AUTO_LIKE', 'ANTI_DELETE'];
 
-export function createPanelRouter({ Session, loadUserConfig, updateUserConfig, configPushers, activeSockets, hashPanelPass, crypto, reqBot }) {
+export function createPanelRouter({ Session, loadUserConfig, updateUserConfig, configPushers, activeSockets, hashPanelPass, crypto, reqBot, aiBot }) {
     const router = express.Router();
 
     // token secret: PANEL_SECRET (.env) - nathnam DB url eken hadanawa, restart unath login eka ain wenne na
@@ -167,6 +167,16 @@ export function createPanelRouter({ Session, loadUserConfig, updateUserConfig, c
         try { res.json({ ok: true, stats: await reqBot.panelStats(req.number) }); }
         catch (e) { console.error('[panel] stats:', e.message); res.status(500).json({ ok: false, error: 'Server error.' }); }
     });
+
+    // 🤖 AI human chat settings (same login token)
+    const aiRoute = (fn) => async (req, res) => {
+        try { res.json({ ok: true, ...(await fn(req)) }); }
+        catch (e) { res.status(400).json({ ok: false, error: String(e.message || 'Error').slice(0, 200) }); }
+    };
+    router.get('/ai', auth, aiRoute((req) => aiBot.panelView(req.number)));
+    router.post('/ai/save', auth, express.json({ limit: '24kb' }), aiRoute((req) => aiBot.panelSave(req.number, req.body)));
+    router.post('/ai/test', auth, express.json({ limit: '24kb' }), aiRoute(async (req) => ({ reply: await aiBot.panelTest(req.number, req.body) })));
+    router.post('/ai/clear', auth, aiRoute(async (req) => { aiBot.clearMemory(req.number); return {}; }));
 
     return router;
 }
