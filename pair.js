@@ -214,7 +214,8 @@ axios.interceptors.response.use(undefined, async (err) => {
 import * as BaileysNS from 'chama-bailez-pro';
 import { installBugShield, installProcessGuards } from './antibug.js';   // 🛡️ bug shield
 import { installBrandCard } from './brandcard.js';
-import { createPanelRouter } from './panel.js';   // 🖥️ web dashboard
+import { createPanelRouter } from './panel.js';
+import { createAiBot } from './aibot.js';   // 🖥️ web dashboard
 import { createCineApi, cleanTitle } from './cinesubzApi.js';
 import { createChithApi } from './chithrapataApi.js';
 import { parseSchedInput, formatWhen, formatLeft, createAudienceTracker, createStatusScheduler } from './statusScheduler.js';   // 🕒 scheduled status   // 🎞️ Chithrapata (supunofc.site)   // 🎬 CineSubz (api.chamindu.site)   // 🪪 logo card (hama reply ekakatama)
@@ -1974,6 +1975,13 @@ const reqBot = createReqBot({
     getSocket: (n) => activeSockets.get(n)?.socket
 });
 
+// 🤖 AI HUMAN CHAT (.ai on / dashboard /ai) - persona, model, memory MongoDB eke; state TTL sweep wenawa
+const aiBot = createAiBot({
+    mongoose, axios, jidNormalizedUser,
+    getSocket: (n) => activeSockets.get(n)?.socket,
+    isReserved: async (n, jid) => { const s = await reqBot.getSettings(n); return !!s.enabled && [s.reqGroup?.jid, s.mvGroup?.jid].includes(jid); }
+});
+
 // "<group link>, <name>" parse karala group eka hoyala (nathnam join wela) { jid, name, query } denawa. Fail unoth null.
 async function groupSendPrelude(socket, { sender, msg, args, isOwner, cmd, prefix }) {
     if (!isOwner) {
@@ -2782,6 +2790,13 @@ async function setupCommandHandlers(socket, number) {
             try {
                 if (await reqBot.onMessage({ socket, number: sanitizedNumber, msg, text, from, isGroup, isCmd, isOwner, senderJid: nowsender, senderNumber })) return;
             } catch (rbErr) { console.error('[ReqBot]', rbErr.message); }
+        }
+
+        // 🤖 AI HUMAN CHAT: main switch ON nam command nowana messages walata manussayek wage reply karanawa
+        if (!msg.key.fromMe && planNow !== 'unverified') {
+            try {
+                if (await aiBot.onMessage({ socket, number: sanitizedNumber, msg, text, from, isGroup, isCmd, isOwner, senderNumber })) return;
+            } catch (aiErr) { console.error('[AI]', aiErr.message); }
         }
 
         // 💤 AWAY auto-reply (inbox, eka user ta 6h ekakata parak): .set AWAY:on , AWAY_MSG:...
@@ -5380,6 +5395,32 @@ case 'setreq':
 case 'setmv':
 case 'reqset': {
     await reqBot.onCommand({ socket, number: sanitizedNumber, msg, command, args, sender, isOwner, prefix: sessionConfig.PREFIX || '.' });
+    break;
+}
+
+case 'apicheck': {
+    // 🩺 .apicheck - menu commands use karana external APIs / sites ok da kiyala check karanawa
+    if (!isOwner) { await socket.sendMessage(sender, { text: '❌ *Owner witharai meka use karanna puluwan.*' }, { quoted: msg }); break; }
+    const hosts = [CH_BASE, 'https://supunofc.site', 'https://api-siteh-22e22e4cb068.herokuapp.com', 'https://apis.laksidu.site', 'https://zara.laksidu.site',
+        'https://sasa-dev-api.xyz', 'https://api.zanta-mini.store', 'https://stream-vault-api.lovable.app', 'https://movie.shaggytech.online',
+        'https://cinesubz.net', 'https://cinesubz.co', 'https://moviehubbd.net', 'https://subzlk.com', 'https://pupilmovie.com', 'https://lakvisiontv.lk',
+        'https://cineru.lk', 'https://www.mflixlk.com', 'https://themoviebox.xyz', 'https://www.moviemanialk.com', 'https://watchwrestling.ws',
+        'https://liteapks.com', 'https://www.1tamilmv.meme', 'https://wttr.in', 'https://pixeldrain.com'];
+    await socket.sendMessage(sender, { text: '🩺 *API check karanawa...* (10s wage yanawa)' }, { quoted: msg });
+    const out = await Promise.all(hosts.map(async (u) => {
+        const t = Date.now();
+        try {
+            const r = await axios.get(u, { timeout: 9000, validateStatus: () => true, maxRedirects: 3 });
+            return `${r.status < 500 ? '✅' : '❌'} ${new URL(u).host}  (${r.status}, ${Date.now() - t}ms)`;
+        } catch (e) { return `❌ ${new URL(u).host}  (${e.code || e.message})`; }
+    }));
+    await socket.sendMessage(sender, { text: `🩺 *API CHECK*\n\n${out.join('\n')}\n\n_❌ thiyena site / API walin wena commands wada karanne na. Me list eka mata evanna - mama ewa fix karannam._` }, { quoted: msg });
+    break;
+}
+
+case 'ai':
+case 'aibot': {
+    await aiBot.onCommand({ socket, number: sanitizedNumber, msg, args, sender, isOwner, prefix: sessionConfig.PREFIX || '.' });
     break;
 }
 
@@ -18913,6 +18954,7 @@ async function EmpirePair(number, res, opts = {}) {
 
 🌐 *Dashboard:* /panel
 🎬 *Request Bot Dashboard:* /req
+🤖 *AI Dashboard:* /ai
 _Login: oyage *number* + me *password* eka. Name / Footer / Movie Footer / Movie Caption / Image wenas karanna. Kawruth ekka share karanna epa. Ayeth ona unoth_ *.panel* _type karanna._`,
                             '✦ 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 𝘃𝟱 ✦'
                         )
@@ -19190,6 +19232,6 @@ async function savePanelPass(number, code) {
         { upsert: true }
     );
 }
-router.use('/panel', createPanelRouter({ Session, loadUserConfig, updateUserConfig, configPushers, activeSockets, hashPanelPass, crypto, reqBot }));
+router.use('/panel', createPanelRouter({ Session, loadUserConfig, updateUserConfig, configPushers, activeSockets, hashPanelPass, crypto, reqBot, aiBot }));
 
 export default router;
