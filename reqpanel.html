@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05060D">
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><script>document.documentElement.dataset.theme=localStorage.getItem("rth")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark")</script><meta name="theme-color" content="#05060D">
 <title>Request Bot Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--a:#8B5CFF;--b:#22D3EE;--ok:#34D399;--bad:#FB7185;--bg:#05060d;--card:#0d1020;--tx:#F1F3FF;--mut:#98A2C8;--line:rgba(160,175,255,.16);--d:'Outfit','Noto Sans Sinhala',system-ui,sans-serif}
+:root{color-scheme:dark;--in:#080a16;--gh:#1a1f3a;--off:#252a48;--a:#8B5CFF;--b:#22D3EE;--ok:#34D399;--bad:#FB7185;--bg:#05060d;--card:#0d1020;--tx:#F1F3FF;--mut:#98A2C8;--line:rgba(160,175,255,.16);--d:'Outfit','Noto Sans Sinhala',system-ui,sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--tx);font:400 15px/1.55 'Inter','Noto Sans Sinhala',system-ui,sans-serif;min-height:100vh;padding:env(safe-area-inset-top) 0 calc(90px + env(safe-area-inset-bottom))}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -15,11 +15,11 @@ header{display:flex;justify-content:space-between;align-items:center;padding:16p
 h1{font:800 28px var(--d)}h2{font:700 16px var(--d);margin-bottom:8px}
 .mut{color:var(--mut);font-size:13px}
 label{display:block;font-weight:600;font-size:13.5px;margin:14px 0 5px}
-input[type=text],input[type=password],input[type=tel],input[type=url],input[type=number],select,textarea{width:100%;min-height:46px;padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:#080a16}
+input[type=text],input[type=password],input[type=tel],input[type=url],input[type=number],select,textarea{width:100%;min-height:46px;padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--in)}
 textarea{min-height:90px;resize:vertical}
 input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
 .btn{min-height:48px;padding:0 24px;border-radius:13px;border:0;font-weight:700;cursor:pointer;background:linear-gradient(120deg,var(--a),var(--b));color:#06070f}
-.btn.sm{min-height:40px;padding:0 16px}.btn.gh{background:#1a1f3a;color:var(--tx)}
+.btn.sm{min-height:40px;padding:0 16px}.btn.gh{background:var(--gh);color:var(--tx)}
 #login{max-width:420px;margin:8vh auto 0}#login .btn{width:100%;margin-top:18px}
 .err{color:var(--bad);min-height:20px;margin-top:10px;font-size:14px}
 #app{display:none}
@@ -29,12 +29,12 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
 .pane{display:none}.pane.on{display:block}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 @media(max-width:760px){.g2{grid-template-columns:1fr}}
-.stat{background:#080a16;border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat{background:var(--in);border:1px solid var(--line);border-radius:14px;padding:12px}
 .stat b{display:block;font:800 24px var(--d)}.stat span{font-size:12px;color:var(--mut)}
 .sw{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .sw span{font-size:12.5px;color:var(--mut);display:block}
-.tg{position:relative;width:50px;height:28px;flex:none}.tg input{position:absolute;inset:0;opacity:0;z-index:1;cursor:pointer;margin:0}
-.tg s{position:absolute;inset:0;border-radius:99px;background:#252a48;transition:.18s}
+.tg{position:relative;width:50px;height:28px;flex:none;margin:0}.tg input{position:absolute;inset:0;opacity:0;z-index:1;cursor:pointer;margin:0}
+.tg s{position:absolute;inset:0;border-radius:99px;background:var(--off);transition:.18s}
 .tg s::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s}
 .tg input:checked+s{background:var(--ok)}.tg input:checked+s::after{transform:translateX(22px)}
 .chart{display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:10px}
@@ -48,10 +48,17 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
 .bub{margin-left:auto;max-width:96%;background:#005c4b;border-radius:12px 12px 4px 12px;padding:6px;font-size:14px}
 .bub img{width:100%;max-height:150px;object-fit:contain;background:#0003;border-radius:8px;display:block;margin-bottom:6px}
 .bub p{padding:2px 6px;white-space:pre-wrap;word-break:break-word}
-.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(5,6,13,.94);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
 .bar .in{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+:root[data-theme=light]{color-scheme:light;--bg:#f4f6fb;--card:#ffffff;--tx:#12162b;--mut:#5b6486;--line:rgba(30,40,90,.15);--in:#f1f3fa;--gh:#e7eaf6;--off:#c9cfe6;--a:#6d3df0;--b:#0891b2;--ok:#059669;--bad:#e11d48}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+input,textarea,select{font-size:16px!important}
+.stat.sm b{font:700 15px var(--d);word-break:break-word}
+.stat.sm span{display:block;margin-top:2px;word-break:break-word}
+.hd{display:flex;align-items:center;gap:14px}
+.num{width:84px!important}
 </style></head><body><div class="w">
-<header><div class="brand"><i>REQUEST BOT</i> Dashboard</div><button class="link" id="out" hidden>Log out</button></header>
+<header><div class="brand"><i>REQUEST BOT</i> Dashboard</div><div class="hd"><button class="link" id="th" aria-label="Theme">☀️ Light</button><button class="link" id="out" hidden>Log out</button></div></header>
 
 <section id="login" class="card">
   <h1>Log in</h1><p class="mut">Bot number + pair web eken connect karaddi dunna pairing code eka.</p>
@@ -61,9 +68,10 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
 </section>
 
 <main id="app">
-  <div class="tabs" id="tabs"><button data-t="ov" class="on">📊 Analytics</button><button data-t="br">🎨 Branding</button><button data-t="ru">📜 Rules</button><button data-t="gr">⚙️ Groups &amp; Messages</button></div>
+  <div class="tabs" id="tabs"><button data-t="ov" class="on">📊 Analytics</button><button data-t="br">🎨 Branding</button><button data-t="ru">📜 Rules</button><button data-t="ft">🧩 Features</button><button data-t="gr">⚙️ Groups &amp; Messages</button></div>
 
   <div class="pane on" id="ov">
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2>📡 Bot status</h2><button class="btn sm gh" id="rf">↻ Refresh</button></div><div class="g3" id="status" style="margin-top:8px"></div><div class="mut" id="stnote" style="margin-top:8px"></div></div>
     <div class="card"><h2>Today</h2><div class="g3" id="today"></div></div>
     <div class="card"><h2>Last 14 days</h2><div class="mut"><span style="color:var(--a)">■</span> requests &nbsp;<span style="color:var(--ok)">■</span> delivered &nbsp;<span style="color:var(--bad)">■</span> failed</div><div class="chart" id="chart"></div></div>
     <div class="g2"><div class="card"><h2>All time (45 days)</h2><div id="tot"></div></div><div class="card"><h2>Sources</h2><div id="src"></div></div></div>
@@ -82,6 +90,7 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
 
   <div class="pane" id="ru">
     <div class="card"><h2>Group rules</h2><p class="mut">Request group eke <b>rules</b> kiyala type karama bot meka yawanawa. Save karapu gaman update wenawa.</p><div id="rules"></div><button class="btn sm gh" id="addr" style="margin-top:12px">+ Add rule</button></div>
+    <div class="card"><h2>Enforced rules</h2><p class="mut">Bot eka me rules automatically apply karanawa (owner ta apply wenne naha).</p><div class="sw"><div><b>One request at a time</b><span>Kalin request eka iwara wenakan aluth ekak gannawa naha</span></div><label class="tg"><input type="checkbox" id="o_oneAtATime"><s></s></label></div><div class="sw"><div><b>Block duplicate requests</b><span>Movie group ekata kalin yawapu film ekak ayeth request karoth block</span></div><label class="tg"><input type="checkbox" id="o_dupBlock"><s></s></label></div><div class="sw"><div><b>Delete links</b><span>Request group eke links dammama delete karala strike ekak denawa (bot admin wenna one)</span></div><label class="tg"><input type="checkbox" id="o_blockLinks"><s></s></label></div><label for="o_badWords">Banned words (comma separated)</label><input id="o_badWords" type="text" placeholder="word1, word2"><div class="g2"><div><label for="o_maxStrikes">Strikes before temp ban (0 = off)</label><input id="o_maxStrikes" type="number" min="0" max="10"></div><div><label for="o_banHours">Temp ban hours</label><input id="o_banHours" type="number" min="1" max="168"></div><div><label for="o_minLen">Min request length</label><input id="o_minLen" type="number" min="2" max="20"></div><div><label for="o_dupHours">Duplicate window (hours)</label><input id="o_dupHours" type="number" min="1" max="168"></div></div><div class="sw"><div><b>Open hours only</b><span>Me welawata witharai requests gannawa (Sri Lanka time)</span></div><label class="tg"><input type="checkbox" id="o_hoursOn"><s></s></label></div><div class="g2"><div><label for="o_hoursFrom">From</label><input id="o_hoursFrom" type="time"></div><div><label for="o_hoursTo">To</label><input id="o_hoursTo" type="time"></div></div><label for="o_closedText">Closed message ({from} {to})</label><textarea id="o_closedText" style="min-height:70px" maxlength="300"></textarea><label for="o_blockList">Blocked numbers (one per line)</label><textarea id="o_blockList" style="min-height:70px"></textarea></div>
     <div class="card"><h2>Automatic rules</h2>
       <div class="g2"><div><label for="limit">Films per person per day</label><input id="limit" type="number" min="1" max="50"></div>
       <div><label for="cool">Seconds between searches</label><input id="cool" type="number" min="3" max="120"></div></div>
@@ -89,6 +98,17 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
       <label>Search sources</label><div id="srcs"></div>
       <div class="sw"><div><b>Inbox guard</b><span>Warn once, then remove from groups + block</span></div><label class="tg"><input type="checkbox" id="guard"><s></s></label></div>
       <label for="allow">Inbox guard ignores (one number per line)</label><textarea id="allow" style="min-height:70px"></textarea></div>
+  </div>
+
+  <div class="pane" id="ft">
+    <div class="card"><h2>🗑️ Auto delete</h2><p class="mut">Seconds walin passe delete wenawa. User ge messages delete wenna bot ekata request group eke <b>admin</b> wenna one (bot ge ewa admin nathuwath delete wenawa).</p>
+      <div class="sw"><div><b>Delete request messages</b><span>User ge film nama + number reply</span></div><div class="hd"><input id="n_delUser" class="num" type="number" min="1" max="3600"><label class="tg"><input type="checkbox" id="t_delUser"><s></s></label></div></div>
+      <div class="sw"><div><b>Delete bot messages</b><span>Search list, notices, "done" message eka</span></div><div class="hd"><input id="n_delBot" class="num" type="number" min="1" max="3600"><label class="tg"><input type="checkbox" id="t_delBot"><s></s></label></div></div></div>
+    <div class="card"><h2>🧩 Features</h2><div class="sw"><div><b>Emoji reactions</b><span>🔎 ⏳ ✅ ❌ reactions user ge message ekata</span></div><label class="tg"><input type="checkbox" id="o_reactions"><s></s></label></div><div class="sw"><div><b>Queue position message</b><span>Pōliye thanak kiyala kiyanawa</span></div><label class="tg"><input type="checkbox" id="o_queueNotice"><s></s></label></div><div class="sw"><div><b>Typing indicator</b><span>Search karanakota "typing…" pennanawa</span></div><label class="tg"><input type="checkbox" id="o_typing"><s></s></label></div><div class="sw"><div><b>Send rules on first request</b><span>Dawase mul request ekata rules yawanawa</span></div><label class="tg"><input type="checkbox" id="o_rulesOnFirst"><s></s></label></div><div class="sw"><div><b>Alert me on failures</b><span>Delivery fail unama oyage inbox ekata message</span></div><label class="tg"><input type="checkbox" id="o_ownerNotify"><s></s></label></div><div class="g2"><div><label for="o_maxResults">Results in search list (3-10)</label><input id="o_maxResults" type="number" min="3" max="10"></div>
+      <div><label for="o_globalGap">Seconds between deliveries</label><input id="o_globalGap" type="number" min="0" max="120"></div></div>
+      <label for="o_searchTip">Tip line under search results</label><input id="o_searchTip" type="text" maxlength="120">
+      <label for="o_notFoundText">Custom "not found" message ({name})</label><textarea id="o_notFoundText" style="min-height:70px" maxlength="300"></textarea></div>
+    <div class="card"><h2>🛠️ Maintenance</h2><div class="sw"><div><b>Maintenance mode</b><span>New requests pause karala message ekak pennanawa</span></div><label class="tg"><input type="checkbox" id="o_maintenance"><s></s></label></div><label for="o_maintText">Maintenance message</label><textarea id="o_maintText" style="min-height:70px" maxlength="300"></textarea></div>
   </div>
 
   <div class="pane" id="gr">
@@ -150,13 +170,14 @@ function fill(r){
   $('#limit').value=r.dailyLimit;$('#cool').value=r.cooldown;$('#qual').value=r.quality;
   $('#en').checked=r.enabled;$('#guard').checked=r.inboxGuard;$('#allow').value=(r.allow||[]).join('\n');
   $('#rn').textContent=r.reqGroup?'✅ '+r.reqGroup.name:'❌ not set';$('#mn').textContent=r.mvGroup?'✅ '+r.mvGroup.name:'❌ not set';
-  $('#rl').value='';$('#ml').value='';rules=[...r.rules];srcOn={...r.sources};drawRules();drawSrcs();preview();
+  $('#rl').value='';$('#ml').value='';rules=[...r.rules];srcOn={...r.sources};drawRules();drawSrcs();preview();fillOpt(r.opt||{});
 }
 $('#save').onclick=async()=>{
   const b=$('#save');b.disabled=true;$('#msg').textContent='Saving…';
   const body={name:$('#name').value,logo:$('#logo').value,text:{caption:$('#caption').value,footer:$('#footer').value,warnText:$('#warn').value,limitText:$('#lim').value,doneText:$('#done').value},
     dailyLimit:$('#limit').value,cooldown:$('#cool').value,quality:$('#qual').value,sources:srcOn,rules:rules.filter(x=>x.trim()),
     enabled:$('#en').checked,inboxGuard:$('#guard').checked,allow:$('#allow').value.split(/\s+/).filter(Boolean)};
+  body.opt=collectOpt();
   if($('#rl').value.trim())body.reqLink=$('#rl').value.trim();if($('#ml').value.trim())body.mvLink=$('#ml').value.trim();
   try{const j=await api('/req/save',{method:'POST',body:JSON.stringify(body)});fill(j.req);$('#msg').textContent='✅ Saved & applied to the bot.'}
   catch(e){$('#msg').textContent='❌ '+e.message}finally{b.disabled=false}
@@ -180,10 +201,49 @@ function stats(s){
   rows($('#tu'),s.topUsers,x=>[el('span',null,x.u),el('b',null,String(x.n))]);
   rows($('#rec'),s.recent,x=>{const p=el('span','pill '+x.type,x.type==='ok'?'SENT'+(x.secs?' '+x.secs+'s':''):'FAIL');return [el('span',null,x.title+' · '+x.user+(x.err?' · '+x.err:'')),p]});
 }
+
+/* theme */
+function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('rth',t);$('#th').textContent=t==='light'?'🌙 Dark':'☀️ Light';document.querySelector('meta[name=theme-color]').content=t==='light'?'#f4f6fb':'#05060D'}
+$('#th').onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
+setTheme(document.documentElement.dataset.theme||'dark');
+/* feature options */
+const OB=['reactions','queueNotice','typing','rulesOnFirst','ownerNotify','maintenance','oneAtATime','dupBlock','blockLinks','hoursOn'];
+const OI=['dupHours','maxStrikes','banHours','minLen','maxResults','globalGap'];
+const OS=['maintText','closedText','notFoundText','searchTip','hoursFrom','hoursTo'];
+function fillOpt(o){
+  OB.forEach(k=>$('#o_'+k).checked=!!o[k]);OI.forEach(k=>$('#o_'+k).value=o[k]??'');OS.forEach(k=>$('#o_'+k).value=o[k]??'');
+  $('#o_badWords').value=(o.badWords||[]).join(', ');$('#o_blockList').value=(o.blockList||[]).join('\n');
+  ['delUser','delBot'].forEach(k=>{$('#t_'+k).checked=o[k]>0;$('#n_'+k).value=o[k]>0?o[k]:30});
+}
+function collectOpt(){
+  const o={};OB.forEach(k=>o[k]=$('#o_'+k).checked);OI.forEach(k=>o[k]=$('#o_'+k).value);OS.forEach(k=>o[k]=$('#o_'+k).value);
+  o.badWords=$('#o_badWords').value.split(',').map(x=>x.trim()).filter(Boolean);o.blockList=$('#o_blockList').value.split(/\s+/).filter(Boolean);
+  ['delUser','delBot'].forEach(k=>o[k]=$('#t_'+k).checked?($('#n_'+k).value||30):0);return o;
+}
+/* status */
+const ago=t=>{const s=(Date.now()-new Date(t))/1000;return s<60?'just now':s<3600?Math.floor(s/60)+' min ago':s<86400?Math.floor(s/3600)+' h ago':Math.floor(s/86400)+' d ago'};
+function statusRender(st){
+  const box=$('#status');box.textContent='';
+  const c=(v,l)=>{const d=el('div','stat sm');d.append(el('b',null,v),el('span',null,l));box.append(d)};
+  c(st.online?'✅ Online':'❌ Offline','Bot · +'+st.phone);
+  c(!st.enabled?'⏸ OFF':st.maintenance?'🛠 Maintenance':!st.open?'⏰ Closed (open hours)':'🟢 ON','Request bot');
+  c(st.reqGroup?st.reqGroup+(st.adminKnown?(st.botAdmin?' · admin ✅':' · not admin ⚠️'):''):'not set','Request group');
+  c(st.mvGroup||'not set','Movie group');
+  c(st.queue+' waiting · '+st.running+' sending','Queue');
+  c(String(st.pending),'Waiting for a number reply');
+  c(String(st.banned),'Temp-banned users');
+  c(st.lastOk?ago(st.lastOk.at):'-','Last delivery'+(st.lastOk?' · '+st.lastOk.title:''));
+  c(st.lastFail?ago(st.lastFail.at):'-','Last failure'+(st.lastFail?' · '+st.lastFail.title:''));
+  const n=[];if(!st.online)n.push('⚠️ Bot offline — pair web eken ayeth connect karanna.');
+  if(st.online&&st.delNeedsAdmin&&st.adminKnown&&!st.botAdmin)n.push('⚠️ Bot request group eke admin nowei: user messages delete / links delete wada karanne naha.');
+  $('#stnote').textContent=n.join(' ');
+}
+async function loadStatus(){if(document.hidden||!T)return;try{statusRender((await api('/req/status')).status)}catch(e){}}
+$('#rf').onclick=loadStatus;
 async function start(){
-  try{const [a,b]=await Promise.all([api('/req'),api('/req/stats')]);
+  try{const [a,b,c]=await Promise.all([api('/req'),api('/req/stats'),api('/req/status')]);
     $('#login').style.display='none';$('#app').style.display='block';$('#out').hidden=false;
-    fill(a.req);stats(b.stats);
+    fill(a.req);stats(b.stats);statusRender(c.status);setInterval(loadStatus,15000);
   }catch(e){$('#lerr').textContent=e.message}
 }
 if(T)start();
