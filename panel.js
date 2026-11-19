@@ -163,6 +163,10 @@ export function createPanelRouter({ Session, loadUserConfig, updateUserConfig, c
         catch (e) { res.status(400).json({ ok: false, error: String(e.message || 'Could not save.').slice(0, 200) }); }
     });
 
+    router.get('/req/status', auth, async (req, res) => {
+        try { res.json({ ok: true, status: await reqBot.panelStatus(req.number) }); }
+        catch (e) { console.error('[panel] status:', e.message); res.status(500).json({ ok: false, error: 'Server error.' }); }
+    });
     router.get('/req/stats', auth, async (req, res) => {
         try { res.json({ ok: true, stats: await reqBot.panelStats(req.number) }); }
         catch (e) { console.error('[panel] stats:', e.message); res.status(500).json({ ok: false, error: 'Server error.' }); }
