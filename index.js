@@ -44,6 +44,11 @@ app.get(['/req', '/request'], (req, res) => {
   res.sendFile(path.join(__path, 'reqpanel.html'));
 });
 
+// 🤖 AI control dashboard (login: bot number + pairing code)
+app.get('/ai', (req, res) => {
+  res.sendFile(path.join(__path, 'aipanel.html'));
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__path, 'main.html'));
 });
