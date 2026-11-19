@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05060D">
+<title>AI Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--a:#8B5CFF;--b:#22D3EE;--ok:#34D399;--bad:#FB7185;--bg:#05060d;--card:#0d1020;--tx:#F1F3FF;--mut:#98A2C8;--line:rgba(160,175,255,.16);--d:'Outfit','Noto Sans Sinhala',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:400 15px/1.55 'Inter','Noto Sans Sinhala',system-ui,sans-serif;min-height:100vh;padding:env(safe-area-inset-top) 0 calc(90px + env(safe-area-inset-bottom))}
+button,input,textarea,select{font:inherit;color:inherit}
+.w{max-width:960px;margin:0 auto;padding:0 16px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+.brand{font:800 19px var(--d)}.brand i{font-style:normal;background:linear-gradient(120deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.link{background:none;border:0;color:var(--b);cursor:pointer;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:14px}
+h1{font:800 28px var(--d)}h2{font:700 16px var(--d);margin-bottom:6px}
+.mut{color:var(--mut);font-size:13px}
+label{display:block;font-weight:600;font-size:13.5px;margin:14px 0 5px}
+input[type=text],input[type=password],input[type=tel],input[type=number],input[type=time],select,textarea{width:100%;min-height:46px;padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:#080a16}
+textarea{min-height:130px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:0;border-color:var(--b)}
+.btn{min-height:46px;padding:0 22px;border-radius:13px;border:0;font-weight:700;cursor:pointer;background:linear-gradient(120deg,var(--a),var(--b));color:#06070f}
+.btn.sm{min-height:38px;padding:0 14px}.btn.gh{background:#1a1f3a;color:var(--tx)}
+#login{max-width:420px;margin:8vh auto 0}#login .btn{width:100%;margin-top:18px}
+.err{color:var(--bad);min-height:20px;margin-top:10px;font-size:14px}
+#app{display:none}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-top:14px}
+.tabs button{flex:none;padding:10px 16px;border-radius:99px;border:1px solid var(--line);background:none;cursor:pointer;font-weight:600;color:var(--mut)}
+.tabs button.on{background:linear-gradient(120deg,var(--a),var(--b));color:#06070f}
+.pane{display:none}.pane.on{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:760px){.g2{grid-template-columns:1fr}}
+.stat{background:#080a16;border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{display:block;font:800 22px var(--d)}.stat span{font-size:12px;color:var(--mut)}
+.sw{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.sw span{font-size:12.5px;color:var(--mut);display:block}
+.tg{position:relative;width:50px;height:28px;flex:none;margin:0}.tg input{position:absolute;inset:0;opacity:0;z-index:1;cursor:pointer;margin:0}
+.tg s{position:absolute;inset:0;border-radius:99px;background:#252a48;transition:.18s}
+.tg s::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s}
+.tg input:checked+s{background:var(--ok)}.tg input:checked+s::after{transform:translateX(22px)}
+.main{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.main .tg{width:76px;height:42px}.main .tg s::after{width:34px;height:34px;top:4px;left:4px}.main .tg input:checked+s::after{transform:translateX(34px)}
+.pres{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chat{background:#0b141a;border-radius:14px;padding:12px;min-height:150px;max-height:300px;overflow-y:auto;border:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.m{max-width:85%;padding:7px 11px;border-radius:12px;white-space:pre-wrap;word-break:break-word;font-size:14px}
+.m.u{align-self:flex-end;background:#005c4b}.m.b{align-self:flex-start;background:#202c33}
+.send{display:flex;gap:8px;margin-top:8px}.send input{flex:1}
+.bars{display:flex;align-items:flex-end;gap:6px;height:100px;margin-top:10px}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:2px}
+.bars i{width:100%;background:linear-gradient(var(--a),var(--b));border-radius:4px 4px 0 0;min-height:2px}.bars small{font-size:10px;color:var(--mut)}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(5,6,13,.94);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+.bar .in{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.warn{background:rgba(251,113,133,.12);border:1px solid var(--bad);color:var(--bad);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13.5px}
+</style></head><body><div class="w">
+<header><div class="brand"><i>AI</i> Control</div><button class="link" id="out" hidden>Log out</button></header>
+
+<section id="login" class="card">
+  <h1>Log in</h1><p class="mut">Bot number + pair web eken connect karaddi dunna pairing code eka.</p>
+  <label for="n">Bot number</label><input id="n" type="tel" placeholder="94712345678">
+  <label for="p">Pairing code</label><input id="p" type="password" autocapitalize="characters">
+  <div class="err" id="lerr"></div><button class="btn" id="go">Log in</button>
+</section>
+
+<main id="app">
+  <div class="tabs" id="tabs"><button data-t="c" class="on">🎛️ Control</button><button data-t="p">🧠 Persona</button><button data-t="h">🧑 Human-like</button><button data-t="t">👥 Targets</button><button data-t="m">🔌 Model</button></div>
+
+  <div class="pane on" id="c">
+    <div class="card"><div class="main"><div><h2 id="mtitle">AI Human Chat</h2><div class="mut">ON karama bot eka manussayek wage reply karanawa.</div></div><label class="tg"><input type="checkbox" id="enabled"><s></s></label></div>
+      <div class="warn" id="nokey" hidden>⚠️ .env eke <b>AI_API_KEY</b> (nathnam SUPUN_API_KEY) set karala bot restart karanna.</div>
+      <label for="name">AI name</label><input id="name" type="text" maxlength="30"><div class="mut">Group eke me name eken hadanawama reply karanawa.</div></div>
+    <div class="card"><h2>This week</h2><div class="g3" id="st"></div><div class="bars" id="bars"></div></div>
+    <div class="card"><h2>Top chatters (7 days)</h2><div id="top"></div></div>
+  </div>
+
+  <div class="pane" id="p">
+    <div class="card"><h2>Prompt</h2><p class="mut">Bot eka kohomada wada karanna one kiyala methana liyanna. Name, character, rules, knowledge okkoma.</p>
+      <textarea id="persona" maxlength="2500" style="min-height:200px"></textarea>
+      <div class="mut" id="pc"></div>
+      <div class="pres" id="pres"></div></div>
+    <div class="card"><h2>Test chat</h2><p class="mut">Save nokarama draft prompt eka test karanna puluwan.</p>
+      <div class="chat" id="chat"></div>
+      <div class="send"><input id="tm" type="text" placeholder="Hi…" maxlength="500"><button class="btn sm" id="ts">Send</button></div></div>
+  </div>
+
+  <div class="pane" id="h"><div class="card"><h2>Human-like behaviour</h2>
+    <div class="sw"><div><b>Typing indicator</b><span>"typing…" pennala reply ekata kalin poddak inna</span></div><label class="tg"><input type="checkbox" id="typing"><s></s></label></div>
+    <div class="sw"><div><b>Blue ticks</b><span>Message eka read karanawa</span></div><label class="tg"><input type="checkbox" id="readReceipt"><s></s></label></div>
+    <div class="sw"><div><b>Split long replies</b><span>Lamba reply eka message 2-3kata kadala yawanawa</span></div><label class="tg"><input type="checkbox" id="split"><s></s></label></div>
+    <div class="g2"><div><label for="speed">Typing speed</label><select id="speed"><option value="fast">Fast</option><option value="normal">Normal</option><option value="slow">Slow</option></select></div>
+    <div><label for="language">Language</label><select id="language"><option value="auto">Auto (match the person)</option><option value="si">Sinhala</option><option value="singlish">Singlish</option><option value="en">English</option></select></div>
+    <div><label for="emoji">Emojis</label><select id="emoji"><option value="none">None</option><option value="low">Few</option><option value="normal">Normal</option></select></div>
+    <div><label for="maxChars">Max reply length (characters)</label><input id="maxChars" type="number" min="60" max="1000"></div>
+    <div><label for="memory">Memory (message pairs remembered)</label><input id="memory" type="number" min="0" max="20"></div>
+    <div><label for="cooldown">Seconds between replies per person</label><input id="cooldown" type="number" min="1" max="60"></div></div>
+    <div class="sw" style="margin-top:14px"><div><b>Sleep time</b><span>Me welawata reply karanne na (Sri Lanka time)</span></div><label class="tg"><input type="checkbox" id="sleepOn"><s></s></label></div>
+    <div class="g2"><div><label for="sleepFrom">From</label><input id="sleepFrom" type="time"></div><div><label for="sleepTo">To</label><input id="sleepTo" type="time"></div></div>
+    <label for="errorText">Message when AI fails (empty = stay silent)</label><input id="errorText" type="text" maxlength="200">
+    <button class="btn sm gh" id="clr" style="margin-top:14px">🧹 Clear chat memory</button></div></div>
+
+  <div class="pane" id="t"><div class="card"><h2>Where should it reply?</h2>
+    <div class="sw"><div><b>Inbox chats</b><span>Private messages walata reply karanawa</span></div><label class="tg"><input type="checkbox" id="inbox"><s></s></label></div>
+    <label for="groups">Groups</label><select id="groups"><option value="off">Off</option><option value="mention">Only when mentioned / replied to / called by name</option><option value="all">Every message</option></select>
+    <div class="sw" style="margin-top:14px"><div><b>Owner only</b><span>Oyata witharai reply karanawa</span></div><label class="tg"><input type="checkbox" id="ownerOnly"><s></s></label></div>
+    <label for="allow">Allow list (one number per line, empty = everyone)</label><textarea id="allow" style="min-height:80px"></textarea>
+    <label for="block">Block list (never reply to)</label><textarea id="block" style="min-height:80px"></textarea>
+    <div class="mut">Request bot groups wala AI reply karanne na.</div></div></div>
+
+  <div class="pane" id="m"><div class="card"><h2>AI model</h2>
+    <label for="provider">Provider</label><select id="provider"></select>
+    <label for="model">Model (chatday provider only)</label><input id="model" type="text" placeholder="openai/gpt-5.4">
+    <div class="sw" style="margin-top:14px"><div><b>Auto fallback</b><span>Provider eka fail unoth wena ekakin try karanawa</span></div><label class="tg"><input type="checkbox" id="fallback"><s></s></label></div></div></div>
+</main></div>
+
+<div class="bar" id="bar" hidden><div class="in"><span class="mut" id="msg">Ready.</span><button class="btn" id="save">Save changes</button></div></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+let T=sessionStorage.getItem('at')||'';
+const PRESETS={'Friendly Sri Lankan':'You are a friendly, funny Sri Lankan guy who loves chatting. Be warm, casual and helpful. Use simple everyday words.','Helpful assistant':'You are a calm, smart and helpful person. Give clear, accurate answers in short messages and ask a question back when something is unclear.','Movie buddy':'You love movies, series and anime. Chat about films, recommend what to watch, and keep it fun. Tell people to use the request group for movie requests.','Business support':'You are a polite support person for a small business. Answer politely and briefly, ask for details when needed, and say the owner will follow up if you do not know.'};
+const BOOL=['enabled','fallback','inbox','ownerOnly','typing','readReceipt','split','sleepOn'];
+const STR=['name','persona','model','errorText','provider','groups','language','emoji','speed','sleepFrom','sleepTo','maxChars','memory','cooldown'];
+async function api(p,o={}){
+  const r=await fetch('/code/panel'+p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T}});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401&&T){logout();throw new Error('Session expired')}
+  if(!j.ok)throw new Error(j.error||'Error');return j;
+}
+function logout(){T='';sessionStorage.removeItem('at');location.reload()}
+$('#out').onclick=logout;
+$('#go').onclick=async()=>{
+  $('#lerr').textContent='';
+  try{const r=await fetch('/code/panel/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:$('#n').value,password:$('#p').value})});
+    const j=await r.json();if(!j.ok)throw new Error(j.error);T=j.token;sessionStorage.setItem('at',T);start();
+  }catch(e){$('#lerr').textContent=e.message}
+};
+$$('#tabs button').forEach(b=>b.onclick=()=>{$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));$$('.pane').forEach(p=>p.classList.toggle('on',p.id===b.dataset.t));$('#bar').hidden=b.dataset.t==='c'&&false});
+Object.entries(PRESETS).forEach(([k,v])=>{const b=el('button','btn sm gh',k);b.onclick=()=>{$('#persona').value=v;cnt()};$('#pres').append(b)});
+const cnt=()=>{$('#pc').textContent=$('#persona').value.length+' / 2500'};$('#persona').oninput=cnt;
+
+function fill(d){
+  const s=d.settings;
+  BOOL.forEach(k=>$('#'+k).checked=!!s[k]);STR.forEach(k=>{if($('#'+k).tagName!=='SELECT'||k!=='provider')$('#'+k).value=s[k]??''});
+  const pv=$('#provider');pv.textContent='';d.providers.forEach(p=>{const o=el('option',null,p);o.value=p;pv.append(o)});pv.value=s.provider;
+  $('#allow').value=(s.allow||[]).join('\n');$('#block').value=(s.block||[]).join('\n');
+  $('#nokey').hidden=d.keySet;$('#mtitle').textContent=s.name+' · AI Human Chat';cnt();
+  const st=d.stats,box=$('#st');box.textContent='';
+  [[st.today.replies,'Replies today'],[st.week.replies,'Replies (7 days)'],[st.week.errors,'Errors (7 days)'],[st.week.avgMs?(st.week.avgMs/1000).toFixed(1)+'s':'-','Avg reply time']].slice(0,3).forEach(([v,l])=>{const x=el('div','stat');x.append(el('b',null,String(v)),el('span',null,l));box.append(x)});
+  const mx=Math.max(1,...st.days.map(x=>x.n)),bars=$('#bars');bars.textContent='';
+  st.days.forEach(x=>{const c=el('div'),i=el('i');i.style.height=Math.max(2,x.n*80/mx)+'px';c.title=x.d+': '+x.n;c.append(i,el('small',null,x.d.slice(8)));bars.append(c)});
+  const top=$('#top');top.textContent='';if(!st.top.length)top.append(el('p','mut','No chats yet.'));
+  st.top.forEach(x=>{const r=el('div','row');r.append(el('span',null,x.u),el('b',null,String(x.n)));top.append(r)});
+}
+function collect(){
+  const b={};BOOL.forEach(k=>b[k]=$('#'+k).checked);STR.forEach(k=>b[k]=$('#'+k).value);
+  b.allow=$('#allow').value.split(/\s+/).filter(Boolean);b.block=$('#block').value.split(/\s+/).filter(Boolean);return b;
+}
+$('#save').onclick=async()=>{
+  const b=$('#save');b.disabled=true;$('#msg').textContent='Saving…';
+  try{fill(await api('/ai/save',{method:'POST',body:JSON.stringify(collect())}));$('#msg').textContent='✅ Saved. Bot eka dan me widiyata wada karanawa.'}
+  catch(e){$('#msg').textContent='❌ '+e.message}finally{b.disabled=false}
+};
+$('#enabled').onchange=async()=>{ // main switch applies immediately
+  try{fill(await api('/ai/save',{method:'POST',body:JSON.stringify({enabled:$('#enabled').checked})}));$('#msg').textContent=$('#enabled').checked?'🟢 AI ON':'🔴 AI OFF'}
+  catch(e){$('#msg').textContent='❌ '+e.message;$('#enabled').checked=!$('#enabled').checked}
+};
+$('#clr').onclick=async()=>{try{await api('/ai/clear',{method:'POST'});$('#msg').textContent='🧹 Memory cleared.'}catch(e){$('#msg').textContent='❌ '+e.message}};
+const say=(c,t)=>{const m=el('div','m '+c,t);$('#chat').append(m);$('#chat').scrollTop=1e9;return m};
+async function test(){
+  const v=$('#tm').value.trim();if(!v)return;$('#tm').value='';say('u',v);const w=say('b','…');$('#ts').disabled=true;
+  try{const j=await api('/ai/test',{method:'POST',body:JSON.stringify({message:v,draft:collect()})});w.textContent=j.reply}
+  catch(e){w.textContent='❌ '+e.message}finally{$('#ts').disabled=false}
+}
+$('#ts').onclick=test;$('#tm').onkeydown=e=>{if(e.key==='Enter')test()};
+async function start(){
+  try{const d=await api('/ai');$('#login').style.display='none';$('#app').style.display='block';$('#out').hidden=false;$('#bar').hidden=false;fill(d)}
+  catch(e){$('#lerr').textContent=e.message}
+}
+if(T)start();
+</script></body></html>
