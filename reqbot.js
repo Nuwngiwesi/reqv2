@@ -39,6 +39,20 @@ export const DEFAULTS = {
     caption: '🎬 𝗥𝗘𝗤𝗨𝗘𝗦𝗧𝗘𝗗 𝗠𝗢𝗩𝗜𝗘',
     dailyLimit: 3,
     inboxGuard: true,
+    // ── 20 features / rules (all editable on /req) ──
+    delUser: 0, delBot: 0,                       // 1,2  auto delete user request msgs / bot msgs (seconds, 0 = off)
+    reactions: true, queueNotice: true,          // 3,4  emoji reactions / queue position notice
+    typing: true, rulesOnFirst: false,           // 5,6  typing indicator / send rules on a user's first request of the day
+    ownerNotify: false, maxResults: 8,           // 7,8  inbox alert when a delivery fails / results shown in search list
+    globalGap: 0, searchTip: '',                 // 9,10 seconds between deliveries / tip line under search results
+    notFoundText: '', maintenance: false,        // 11,12 custom "not found" text / maintenance mode
+    maintText: '🛠️ Request bot දැන් maintenance වෙනවා. ටිකකින් ආයෙ try කරන්න. 🙏',
+    oneAtATime: true, dupBlock: false, dupHours: 24,  // 13,14 one request at a time / block duplicate titles
+    blockLinks: false, badWords: [],             // 15,16 delete links / banned words
+    maxStrikes: 3, banHours: 6,                  // 17   strikes -> temporary request ban
+    hoursOn: false, hoursFrom: '08:00', hoursTo: '23:00',  // 18 open hours (Sri Lanka time)
+    closedText: '⏰ Request bot දැන් *වසා* තියෙන්නේ. {from} - {to} අතර request කරන්න. 🙏',
+    blockList: [], minLen: 2,                    // 19,20 blocked numbers / minimum request length
     warnText:
         '⚠️ *අවවාදයයි!*\n\nමේ inbox එකට message දාන්න එපා. 🙏\n' +
         'Film / Cartoon / Anime *request* කරන්න ඕන නම් *request group එකට* ගිහින් නම ලියන්න.\n\n' +
@@ -54,6 +68,10 @@ const digits = (j) => String(j || '').split('@')[0].split(':')[0].replace(/\D/g,
 const clip = (s, n) => { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const fill = (t, o) => String(t).replace(/\{(\w+)\}/g, (_, k) => (o[k] ?? ''));
 const safeName = (n) => String(n || 'file').replace(/[\\/:*?"<>|%]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+const low = (x) => String(x).toLowerCase().normalize('NFC');
+const lkMin = () => { const d = new Date(Date.now() + 5.5 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+const hm = (x) => { const [h, m] = String(x).split(':').map(Number); return h * 60 + (m || 0); };
+const inHours = (s) => { if (!s.hoursOn) return true; const n = lkMin(), a = hm(s.hoursFrom), b = hm(s.hoursTo); return a <= b ? n >= a && n < b : n >= a || n < b; };
 const lkDay = () => new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);   // Sri Lanka day
 const withTimeout = (p, ms, label = 'timeout') => {
     let t;
@@ -128,6 +146,11 @@ export function makeStore(mongoose) {
         },
         async clearWarn(number, user) { await Warn.deleteOne({ number, user }); },
         log(number, ev) { Event.create({ number, day: lkDay(), at: new Date(), ...ev }).catch(() => {}); },
+        async last(number) {
+            const f = (t) => Event.findOne({ number, type: t }).sort({ at: -1 }).select('at title').lean();
+            const [ok, fail] = await Promise.all([f('ok'), f('fail')]);
+            return { ok, fail };
+        },
         async stats(number) {
             const dayAgo = (n) => new Date(Date.now() + 5.5 * 3600e3 - n * 864e5).toISOString().slice(0, 10);
             const days = Array.from({ length: 14 }, (_, i) => dayAgo(13 - i));
@@ -194,6 +217,12 @@ export function createReqBot(deps) {
     const lastReq = new Map();      // `${number}|${user}` -> ts   (search cooldown)
     const limitNoticed = new Map(); // `${number}|${user}` -> ts   (limit message throttle)
     const searching = new Set();    // `${number}|${user}`         (one search at a time per user)
+    const strikeMap = new Map();    // `${number}|${user}` -> {n, until, t}   rule-break strikes / temp ban
+    const delivered = new Map();    // `${number}|${title}` -> ts             duplicate request guard
+    const activeUsers = new Set();  // `${number}|${user}`                    one request at a time
+    const rulesSeen = new Set();    // `${number}|${user}|${day}`
+    const nextStart = new Map();    // number -> ts                           global gap between deliveries
+    const adminCache = new Map();   // number -> {t, v}
 
     const sweeper = setInterval(() => {
         const now = Date.now();
@@ -201,6 +230,10 @@ export function createReqBot(deps) {
         for (const [k, t] of lastReq) if (now - t > 5 * 60 * 1000) lastReq.delete(k);
         for (const [k, t] of limitNoticed) if (now - t > 30 * 60 * 1000) limitNoticed.delete(k);
         for (const [k, c] of sCache) if (now - c.t > 10 * 60 * 1000) sCache.delete(k);
+        for (const [k, v] of strikeMap) if (now - (v.t || 0) > 24 * 3600e3 && (v.until || 0) < now) strikeMap.delete(k);
+        for (const [k, t] of delivered) if (now - t > 48 * 3600e3) delivered.delete(k);
+        for (const [k, t] of nextStart) if (t < now) nextStart.delete(k);
+        if (rulesSeen.size > 3000) rulesSeen.clear();
     }, 60 * 1000);
     sweeper.unref?.();
 
@@ -210,12 +243,25 @@ export function createReqBot(deps) {
     };
 
     // safe send: timeout + retry without quote
+    // 🗑️ auto delete: bot messages in the request group (delBot s) and the user's own messages (delUser s, needs group admin)
+    const delCfg = new Map();                // request group jid -> seconds for bot messages (0 = off)
+    let delTimers = 0;
+    const autoDel = (socket, jid, key, sec) => {
+        if (!key?.id || !(sec >= 0) || delTimers > 800) return;
+        delTimers++;
+        const t = setTimeout(() => { delTimers--; socket.sendMessage(jid, { delete: key }).catch(() => {}); }, sec * 1000);
+        t.unref?.();
+    };
     const send = async (socket, jid, content, opts) => {
-        try { return await withTimeout(socket.sendMessage(jid, content, opts), 45000, 'WhatsApp send'); }
+        let r;
+        try { r = await withTimeout(socket.sendMessage(jid, content, opts), 45000, 'WhatsApp send'); }
         catch (e) {
             if (!opts?.quoted) throw e;
-            return await withTimeout(socket.sendMessage(jid, content), 45000, 'WhatsApp send (retry)');
+            r = await withTimeout(socket.sendMessage(jid, content), 45000, 'WhatsApp send (retry)');
         }
+        const sec = delCfg.get(jid);
+        if (sec > 0 && r?.key && !content?.react && !content?.delete && !content?.edit) autoDel(socket, jid, r.key, sec);
+        return r;
     };
     const sendPost = async (socket, jid, image, caption, opts) => {
         if ((image = image || opts?.logo)) { try { return await send(socket, jid, { image: { url: image }, caption, ...(opts?.mentions ? { mentions: opts.mentions } : {}) }, opts?.quoted ? { quoted: opts.quoted } : undefined); } catch (_) { /* fall through to text */ } }
@@ -339,7 +385,13 @@ export function createReqBot(deps) {
     async function runJob(job) {
         const { number, groupJid, requester, userKey, info, pick, s, quotedMsg } = job;
         const socket = getSocket(number);
-        if (!socket) { await store.refund(number, userKey).catch(() => {}); return; }
+        if (!socket) { activeUsers.delete(`${number}|${userKey}`); await store.refund(number, userKey).catch(() => {}); return; }
+        delCfg.set(groupJid, s.delBot > 0 ? s.delBot : 0);
+        if (s.globalGap > 0) {                                   // anti-ban: spread deliveries out
+            const at = Math.max(Date.now(), nextStart.get(number) || 0);
+            nextStart.set(number, at + s.globalGap * 1000);
+            if (at > Date.now()) await new Promise((res) => setTimeout(res, at - Date.now()));
+        }
         const title = info.kind === 'episodes' ? `${info.title} - ${pick.name}` : info.title;
         const tmp = path.join(os.tmpdir(), `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`);
         const mention = [requester];
@@ -403,16 +455,22 @@ export function createReqBot(deps) {
             const done = fill(s.doneText, { user: digits(requester), title, limit: s.dailyLimit, left, link: s.mvGroup.link ? `\n🔗 ${s.mvGroup.link}` : '' });
             await sendPost(socket, groupJid, info.poster, `${done}\n\n${foot(s)}`, { mentions: mention, quoted: quotedMsg, logo: s.logo }).catch((e) => console.error('[ReqBot] done msg:', e.message));
             store.log(number, { type: 'ok', user: digits(requester), title, src: job.src, secs: Math.round((Date.now() - t0) / 1000) });
+            delivered.set(`${number}|${low(title)}`, Date.now());
+            if (delivered.size > 500) delivered.delete(delivered.keys().next().value);
+            if (s.reactions !== false && quotedMsg?.key) socket.sendMessage(groupJid, { react: { text: '✅', key: quotedMsg.key } }).catch(() => {});
             console.log(`[ReqBot] ${number} sent "${title}" in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
         } catch (err) {
             console.error('[ReqBot] job failed:', err?.message);
             store.log(number, { type: 'fail', user: digits(requester), title, src: job.src, err: clip(err?.message, 120) });
             await store.refund(number, userKey).catch(() => {});      // failed request must not eat the daily quota
+            if (s.reactions !== false && quotedMsg?.key) socket.sendMessage(groupJid, { react: { text: '❌', key: quotedMsg.key } }).catch(() => {});
+            if (s.ownerNotify && socket.user?.id) socket.sendMessage(`${digits(socket.user.id)}@s.whatsapp.net`, { text: `⚠️ *Request failed*\n🎬 ${title}\n👤 @${digits(requester)}\n_${clip(err?.message, 150)}_` }).catch(() => {});
             await send(socket, groupJid, {
                 text: `❌ ${tag} *${clip(title, 50)}* යවන්න බැරි වුණා.\n_${clip(err?.message, 120)}_\n\nඔයාගේ දවසේ limit එකෙන් මේක අඩු කළේ නෑ. පස්සේ ආයෙ try කරන්න.\n${foot(s)}`,
                 mentions: mention
             }, { quoted: quotedMsg }).catch(() => {});
         } finally {
+            activeUsers.delete(`${number}|${userKey}`);
             fs.remove(tmp).catch(() => {});
         }
     }
@@ -420,6 +478,16 @@ export function createReqBot(deps) {
     // pick -> (limit check) -> queue
     async function confirmAndQueue({ socket, number, s, groupJid, requester, userKey, isOwner, info, pick, src, quotedMsg }) {
         const tag = `@${digits(requester)}`;
+        const tkey = `${number}|${low(info.kind === 'episodes' ? `${info.title} - ${pick.name}` : info.title)}`;
+        if (!isOwner && s.oneAtATime !== false && activeUsers.has(`${number}|${userKey}`)) {
+            await send(socket, groupJid, { text: `⏳ ${tag} ඔයාගේ කලින් request එක තාම process වෙනවා. ඒක ඉවර වුණාම ඊළඟ එක request කරන්න.\n${foot(s)}`, mentions: [requester] }, { quoted: quotedMsg }).catch(() => {});
+            return;
+        }
+        const was = delivered.get(tkey);
+        if (!isOwner && s.dupBlock && was && Date.now() - was < (s.dupHours || 24) * 3600e3) {
+            await send(socket, groupJid, { text: `♻️ ${tag} *${clip(info.title, 50)}* මීට කලින් Movie Group එකට යවලා තියෙනවා. එතනින් බලන්න.${s.mvGroup?.link ? `\n🔗 ${s.mvGroup.link}` : ''}\n${foot(s)}`, mentions: [requester] }, { quoted: quotedMsg }).catch(() => {});
+            return;
+        }
         let used = 0;
         if (!isOwner) {
             used = await store.tryConsume(number, userKey, s.dailyLimit);
@@ -435,7 +503,8 @@ export function createReqBot(deps) {
             await send(socket, groupJid, { text: `⏳ ${tag} දැන් request ගොඩක් පෝලිමේ ඉන්නවා. ටිකකින් ආයෙ try කරන්න.\n${foot(s)}`, mentions: [requester] }, { quoted: quotedMsg }).catch(() => {});
             return;
         }
-        if (pos > 1) await send(socket, groupJid, { text: `🕐 ${tag} ඔයාගේ request එක පෝලිමේ *${pos}* වෙනි තැන.`, mentions: [requester] }, { quoted: quotedMsg }).catch(() => {});
+        activeUsers.add(`${number}|${userKey}`);
+        if (pos > 1 && s.queueNotice !== false) await send(socket, groupJid, { text: `🕐 ${tag} ඔයාගේ request එක පෝලිමේ *${pos}* වෙනි තැන.`, mentions: [requester] }, { quoted: quotedMsg }).catch(() => {});
     }
 
     // ───────────── group: request / selection ─────────────
@@ -447,6 +516,20 @@ export function createReqBot(deps) {
         return /[a-z\u0d80-\u0dff]/i.test(t);
     };
 
+    async function ruleBreak(socket, s, number, from, msg, requester, userKey, kind) {
+        socket.sendMessage(from, { delete: msg.key }).catch(() => {});            // needs group admin
+        const k = `${number}|${userKey}`;
+        const st = strikeMap.get(k) || { n: 0, until: 0, t: 0 };
+        st.n++; st.t = Date.now();
+        const max = s.maxStrikes || 0;
+        let txt;
+        if (max && st.n >= max) { st.until = Date.now() + (s.banHours || 6) * 3600e3; st.n = 0; txt = `🚫 @${userKey} rules කඩ කළ නිසා *${s.banHours || 6} පැය* request කරන්න බැරි වෙනවා.`; }
+        else txt = `⚠️ @${userKey} ${kind === 'link' ? 'links දාන්න එපා' : 'වචන පාවිච්චි කරන්න සැලකිලිමත් වෙන්න'}! ${max ? `(අවවාද ${st.n}/${max})` : ''}\n_Rules බලන්න: *rules* කියලා ලියන්න_`;
+        strikeMap.set(k, st);
+        store.log(number, { type: 'warn', user: userKey });
+        await send(socket, from, { text: txt, mentions: [requester] }).catch(() => {});
+    }
+
     async function handleGroup(ctx, s) {
         const { socket, number, msg, text, from, senderJid, isOwner } = ctx;
         if (!s.reqGroup?.jid || from !== s.reqGroup.jid || !s.mvGroup?.jid) return false;
@@ -455,6 +538,18 @@ export function createReqBot(deps) {
         const userKey = digits(requester);
         const inc = extractIncoming ? extractIncoming(msg) : {};
         const quotedId = inc.stanzaId;
+        delCfg.set(from, s.delBot > 0 ? s.delBot : 0);
+        const autoDelUser = () => { if (s.delUser > 0) autoDel(socket, from, msg.key, s.delUser); };
+
+        // --- enforced rules (owner is exempt) ---
+        if (!isOwner) {
+            if ((s.blockList || []).includes(userKey)) return true;
+            if ((strikeMap.get(`${number}|${userKey}`)?.until || 0) > Date.now()) return true;      // temporarily banned
+            const t = String(text);
+            const bad = s.blockLinks && /(https?:\/\/|www\.|chat\.whatsapp\.com|wa\.me)/i.test(t) ? 'link'
+                : (s.badWords || []).some((w) => w && low(t).includes(low(w))) ? 'word' : '';
+            if (bad) { await ruleBreak(socket, s, number, from, msg, requester, userKey, bad); return true; }
+        }
 
         // --- selection ---
         const asNumber = /^\d{1,2}$/.test(String(text).trim()) ? parseInt(text, 10) : 0;
@@ -473,7 +568,8 @@ export function createReqBot(deps) {
                 return true;
             }
             pending.delete(key);                                   // consume (double-tap safe)
-            socket.sendMessage(from, { react: { text: '⏳', key: msg.key } }).catch(() => {});
+            autoDelUser();
+            if (s.reactions !== false) socket.sendMessage(from, { react: { text: '⏳', key: msg.key } }).catch(() => {});
 
             if (p.kind === 'list') {
                 const item = p.items[asNumber - 1];
@@ -521,11 +617,26 @@ export function createReqBot(deps) {
 
         // --- new request ---
         let name = String(text).trim().replace(/^(?:req(?:uest)?|please|pls|plz)\b[:\s-]*/i, '').trim();
-        if (!looksLikeRequest(name)) return false;
+        if (!looksLikeRequest(name) || name.length < (s.minLen || 2)) return false;
         const ck = `${number}|${userKey}`;
         if (searching.has(ck)) return true;
         if (Date.now() - (lastReq.get(ck) || 0) < (s.cooldown || 8) * 1000) return true;
         lastReq.set(ck, Date.now());
+
+        if (!isOwner && (s.maintenance || !inHours(s))) {
+            if (Date.now() - (limitNoticed.get(`m|${ck}`) || 0) > 10 * 60 * 1000) {
+                limitNoticed.set(`m|${ck}`, Date.now());
+                const t = s.maintenance ? (s.maintText || DEFAULTS.maintText) : fill(s.closedText || DEFAULTS.closedText, { from: s.hoursFrom, to: s.hoursTo });
+                await send(socket, from, { text: `${t}\n\n${foot(s)}`, mentions: [requester] }, { quoted: msg }).catch(() => {});
+            }
+            autoDelUser();
+            return true;
+        }
+        autoDelUser();
+        if (s.rulesOnFirst && s.rules?.length) {
+            const rk = `${number}|${userKey}|${lkDay()}`;
+            if (!rulesSeen.has(rk)) { rulesSeen.add(rk); await send(socket, from, { text: rulesText(s) }, { quoted: msg }).catch(() => {}); }
+        }
 
         if (!isOwner) {
             const used = await store.getUsed(number, userKey);
@@ -540,9 +651,14 @@ export function createReqBot(deps) {
         }
         searching.add(ck);
         try {
-            socket.sendMessage(from, { react: { text: '🔎', key: msg.key } }).catch(() => {});
-            const items = await searchAll(name, s.sources);
+            if (s.reactions !== false) socket.sendMessage(from, { react: { text: '🔎', key: msg.key } }).catch(() => {});
+            if (s.typing !== false) socket.sendPresenceUpdate('composing', from).catch(() => {});
+            const items = (await searchAll(name, s.sources)).slice(0, s.maxResults || 8);
             store.log(number, { type: items.length ? 'search' : 'nores', user: userKey, title: clip(name, 60) });
+            if (!items.length && s.notFoundText) {
+                await send(socket, from, { text: `${fill(s.notFoundText, { name: clip(name, 40) })}\n\n${foot(s)}` }, { quoted: msg }).catch(() => {});
+                return true;
+            }
             if (!items.length) {
                 await send(socket, from, { text: `❌ *"${clip(name, 40)}"* කියලා එකක් හොයාගන්න බැරි වුණා.\n_නම හරියටම (English වලින්) ලියලා ආයෙ try කරන්න._\n\n${foot(s)}` }, { quoted: msg }).catch(() => {});
                 return true;
@@ -551,10 +667,11 @@ export function createReqBot(deps) {
                 `🔎 *SEARCH RESULTS*  _${clip(name, 40)}_\n╭──────●➤\n` +
                 items.map((it, i) => `*${i + 1}* ${it.icon} ${clip(it.title, 55)}${it.year ? ` (${it.year})` : ''}`).join('\n') +
                 `\n╰──────●➤\n\n👉 ඔයාට ඕන එකේ *number එක මේ message එකට reply* කරන්න\n🎬 Movie  🎞️ Dinka  🧸 Cartoon  🎌 Anime\n\n${foot(s)}`;
-            const sent = await sendPost(socket, from, items[0].image, body, { quoted: msg, logo: s.logo }).catch(() => null);
+            const sent = await sendPost(socket, from, items[0].image, s.searchTip ? `${body}\n💡 ${s.searchTip}` : body, { quoted: msg, logo: s.logo }).catch(() => null);
             if (sent?.key?.id) addPending(`${number}|${sent.key.id}`, { kind: 'list', userKey, groupJid: from, items });
         } finally {
             searching.delete(ck);
+            if (s.typing !== false) socket.sendPresenceUpdate('paused', from).catch(() => {});
         }
         return true;
     }
@@ -724,6 +841,9 @@ export function createReqBot(deps) {
     }
 
     // ───────────── public: web panel helpers ─────────────
+    const OPT_BOOL = ['reactions', 'queueNotice', 'typing', 'rulesOnFirst', 'ownerNotify', 'maintenance', 'oneAtATime', 'dupBlock', 'blockLinks', 'hoursOn'];
+    const OPT_INT = { delUser: [0, 3600], delBot: [0, 3600], dupHours: [1, 168], maxStrikes: [0, 10], banHours: [1, 168], minLen: [2, 20], maxResults: [3, 10], globalGap: [0, 120] };
+    const OPT_STR = { maintText: 300, closedText: 300, notFoundText: 300, searchTip: 120 };
     const PANEL_TEXT = { footer: 100, caption: 100, warnText: 900, limitText: 600, doneText: 900 };
     async function panelView(number) {
         const s = await getSettings(number);
@@ -734,6 +854,7 @@ export function createReqBot(deps) {
             reqGroup: s.reqGroup ? { name: s.reqGroup.name, link: s.reqGroup.link } : null,
             mvGroup: s.mvGroup ? { name: s.mvGroup.name, link: s.mvGroup.link } : null,
             allow: s.allow || [],
+            opt: Object.fromEntries([...OPT_BOOL, ...Object.keys(OPT_INT), ...Object.keys(OPT_STR), 'hoursFrom', 'hoursTo', 'badWords', 'blockList', 'delUser', 'delBot'].map((k) => [k, s[k]])),
             text: Object.fromEntries(Object.keys(PANEL_TEXT).map((k) => [k, String(s[k] ?? '')]))
         };
     }
@@ -763,21 +884,50 @@ export function createReqBot(deps) {
         if (body?.enabled !== undefined) patch.enabled = !!body.enabled;
         if (body?.inboxGuard !== undefined) patch.inboxGuard = !!body.inboxGuard;
         if (Array.isArray(body?.allow)) patch.allow = [...new Set(body.allow.map(digits).filter((x) => x.length >= 6))].slice(0, 200);
+        const o = body?.opt || {};
+        for (const k of OPT_BOOL) if (o[k] !== undefined) patch[k] = !!o[k];
+        for (const [k, [lo, hi]] of Object.entries(OPT_INT)) if (o[k] !== undefined) { const n = parseInt(o[k], 10); if (!(n >= lo && n <= hi)) throw new Error(`${k}: ${lo} - ${hi}`); patch[k] = n; }
+        for (const [k, max] of Object.entries(OPT_STR)) if (o[k] !== undefined) { const v = String(o[k]).replace(/\u0000/g, '').trim(); if (v.length > max) throw new Error(`${k} දිග වැඩියි (max ${max})`); patch[k] = v; }
+        for (const k of ['hoursFrom', 'hoursTo']) if (o[k] !== undefined) { if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(o[k])) throw new Error('Time must be HH:MM'); patch[k] = o[k]; }
+        if (Array.isArray(o.badWords)) patch.badWords = [...new Set(o.badWords.map((w) => String(w).trim().toLowerCase().slice(0, 30)).filter(Boolean))].slice(0, 50);
+        if (Array.isArray(o.blockList)) patch.blockList = [...new Set(o.blockList.map(digits).filter((x) => x.length >= 6))].slice(0, 200);
         if (body?.reqLink) await setGroup(number, 'req', body.reqLink);
         if (body?.mvLink) await setGroup(number, 'mv', body.mvLink);
         if (Object.keys(patch).length) await patchSettings(number, patch);
         return panelView(number);
     }
 
+    async function panelStatus(number) {
+        const s = await getSettings(number);
+        const socket = getSocket(number);
+        let adm = adminCache.get(number);
+        if (socket && s.reqGroup?.jid && (!adm || Date.now() - adm.t > 60000)) { adm = { t: Date.now(), v: await adminState(socket, s.reqGroup.jid) }; adminCache.set(number, adm); }
+        const last = await store.last(number).catch(() => ({}));
+        const now = Date.now();
+        return {
+            online: !!socket?.user, phone: digits(socket?.user?.id || number),
+            enabled: !!s.enabled, maintenance: !!s.maintenance, open: inHours(s),
+            reqGroup: s.reqGroup?.name || null, mvGroup: s.mvGroup?.name || null,
+            adminKnown: !!adm && adm.v !== '?', botAdmin: !!adm && /^admin ✅/.test(adm.v),
+            queue: queue.filter((j) => j.number === number).length, running,
+            pending: [...pending.keys()].filter((k) => k.startsWith(`${number}|`)).length,
+            banned: [...strikeMap.entries()].filter(([k, v]) => k.startsWith(`${number}|`) && v.until > now).length,
+            lastOk: last.ok ? { at: last.ok.at, title: last.ok.title } : null,
+            lastFail: last.fail ? { at: last.fail.at, title: last.fail.title } : null,
+            delNeedsAdmin: (s.delUser > 0 || s.blockLinks || (s.badWords || []).length > 0)
+        };
+    }
+
     function detach(number) {
         for (const k of [...pending.keys()]) if (k.startsWith(`${number}|`)) pending.delete(k);
         for (const m of [lastReq, limitNoticed]) for (const k of [...m.keys()]) if (k.startsWith(`${number}|`)) m.delete(k);
         for (let i = queue.length - 1; i >= 0; i--) if (queue[i].number === number) queue.splice(i, 1);
+        for (const k of [...activeUsers]) if (k.startsWith(`${number}|`)) activeUsers.delete(k);
         sCache.delete(number);
     }
 
     return {
-        onMessage, onCommand, detach, panelView, panelSave, getSettings, panelStats: (n) => store.stats(n),
+        onMessage, onCommand, detach, panelView, panelSave, panelStatus, getSettings, panelStats: (n) => store.stats(n),
         COMMANDS: new Set(['reqbot', 'setreq', 'setmv', 'reqset']),
         stats: () => ({ pending: pending.size, queue: queue.length, running, lastReq: lastReq.size, searching: searching.size })
     };
